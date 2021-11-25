@@ -18,8 +18,7 @@ func TestDispatcher(t *testing.T) {
 		returnVal error
 	}
 
-	t.Parallel()
-	for name, test := range map[string]struct {
+	for name, testParams := range map[string]struct {
 		handlers   []testHandler
 		numMatches int
 	}{
@@ -80,12 +79,13 @@ func TestDispatcher(t *testing.T) {
 			numMatches: 2,
 		},
 	} {
+		name, testParams := name, testParams
+
 		t.Run(name, func(t *testing.T) {
 			d := ext.NewDispatcher(make(chan json.RawMessage), nil)
 			var events []int
-			for tmpIdx, tmpH := range test.handlers {
-				idx := tmpIdx
-				h := tmpH
+			for idx, h := range testParams.handlers {
+				idx, h := idx, h
 
 				t.Logf("Loading handler %d in group %d", idx, h.group)
 				d.AddHandlerToGroup(handlers.NewMessage(message.All, func(b *gotgbot.Bot, ctx *ext.Context) error {
@@ -109,8 +109,8 @@ func TestDispatcher(t *testing.T) {
 			if !sort.IntsAreSorted(events) {
 				t.Errorf("order of events is not sorted: %v", events)
 			}
-			if len(events) != test.numMatches {
-				t.Errorf("got %d matches, expected %d ", len(events), test.numMatches)
+			if len(events) != testParams.numMatches {
+				t.Errorf("got %d matches, expected %d ", len(events), testParams.numMatches)
 			}
 		})
 	}
