@@ -2,7 +2,6 @@ package ext_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"sort"
 	"testing"
 
@@ -12,36 +11,107 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters/message"
 )
 
-func TestDispatcher_TwoHandlersOneGroup(t *testing.T) {
-	updateChan := make(chan json.RawMessage)
-	d := ext.NewDispatcher(updateChan, nil)
+func TestDispatcher(t *testing.T) {
+	type testHandler struct {
+		group     int
+		shouldRun bool
+		returnVal error
+	}
 
-	var orderOfEvents []int
-	// Add to handlers to group 0 (default). First should run, second should NOT.
-	d.AddHandler(handlers.NewMessage(message.All, func(b *gotgbot.Bot, ctx *ext.Context) error {
-		orderOfEvents = append(orderOfEvents, 0)
-		return nil
-	}))
-	d.AddHandler(handlers.NewMessage(message.All, func(b *gotgbot.Bot, ctx *ext.Context) error {
-		orderOfEvents = append(orderOfEvents, 0)
-		fmt.Println("should not execute the second handler in group 0")
-		t.Fail()
-		return nil
-	}))
+	t.Parallel()
+	for name, test := range map[string]struct {
+		handlers   []testHandler
+		numMatches int
+	}{
+		"one group two handlers": {
+			handlers: []testHandler{
+				{
+					group:     0,
+					shouldRun: true,
+					returnVal: nil,
+				}, {
+					group:     0,
+					shouldRun: false, // same group, so doesnt run
+					returnVal: nil,
+				},
+			},
+			numMatches: 1,
+		},
+		"two handlers two groups": {
+			handlers: []testHandler{
+				{
+					group:     0,
+					shouldRun: true,
+					returnVal: nil,
+				}, {
+					group:     1,
+					shouldRun: true, // second group, so also runs
+					returnVal: nil,
+				},
+			},
+			numMatches: 2,
+		},
+		"end groups": {
+			handlers: []testHandler{
+				{
+					group:     0,
+					shouldRun: true,
+					returnVal: ext.EndGroups,
+				}, {
+					group:     1,
+					shouldRun: false, // ended, so second group doesnt run
+					returnVal: nil,
+				},
+			},
+			numMatches: 1,
+		},
+		"continue groups": {
+			handlers: []testHandler{
+				{
+					group:     0,
+					shouldRun: true,
+					returnVal: ext.ContinueGroups,
+				}, {
+					group:     0,
+					shouldRun: true, // continued, so second item in same group runs
+					returnVal: nil,
+				},
+			},
+			numMatches: 2,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			d := ext.NewDispatcher(make(chan json.RawMessage), nil)
+			var events []int
+			for tmpIdx, tmpH := range test.handlers {
+				idx := tmpIdx
+				h := tmpH
 
-	d.AddHandlerToGroup(handlers.NewMessage(message.All, func(b *gotgbot.Bot, ctx *ext.Context) error {
-		orderOfEvents = append(orderOfEvents, 1)
-		return nil
-	}), 1)
+				t.Logf("Loading handler %d in group %d", idx, h.group)
+				d.AddHandlerToGroup(handlers.NewMessage(message.All, func(b *gotgbot.Bot, ctx *ext.Context) error {
+					if !h.shouldRun {
+						t.Errorf("handler %d in group %d should not have run", idx, h.group)
+						t.FailNow()
+					}
 
-	d.ProcessUpdate(nil, &gotgbot.Update{
-		Message: &gotgbot.Message{Text: "test text"},
-	}, nil)
+					t.Logf("handler %d in group %d has run, as expected", idx, h.group)
+					events = append(events, idx)
+					return h.returnVal
+				}), h.group)
+			}
 
-	// ensure events handled in order
-	if !sort.IntsAreSorted(orderOfEvents) || len(orderOfEvents) != 2 {
-		// only one item should be triggered
-		fmt.Println("order of events is not sorted, or was not 2")
-		t.Fail()
+			t.Log("Processing one update...")
+			d.ProcessUpdate(nil, &gotgbot.Update{
+				Message: &gotgbot.Message{Text: "test text"},
+			}, nil)
+
+			// ensure events handled in order
+			if !sort.IntsAreSorted(events) {
+				t.Errorf("order of events is not sorted: %v", events)
+			}
+			if len(events) != test.numMatches {
+				t.Errorf("got %d matches, expected %d ", len(events), test.numMatches)
+			}
+		})
 	}
 }
