@@ -34,8 +34,9 @@ type Updater struct {
 var (
 	totalUpdates = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "gotgbot_updates_total",
-			Help: "Number of incoming updates.",
+			Namespace: "gotgbot",
+			Name:      "updates_total",
+			Help:      "Number of incoming updates.",
 		},
 		[]string{
 			"mode",

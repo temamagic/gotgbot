@@ -29,8 +29,9 @@ const (
 var (
 	totalRequests = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "gotgbot_requests_total",
-			Help: "Number of requests made to the bot API.",
+			Namespace: "gotgbot",
+			Name:      "requests_total",
+			Help:      "Number of requests made to the bot API.",
 		},
 		[]string{
 			"http_method",
@@ -39,8 +40,9 @@ var (
 	)
 	totalHTTPErrors = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "gotgbot_http_request_errors_total",
-			Help: "Number of HTTP errors obtained.",
+			Namespace: "gotgbot",
+			Name:      "http_request_errors_total",
+			Help:      "Number of HTTP errors obtained.",
 		},
 		[]string{
 			"http_method",
@@ -49,8 +51,9 @@ var (
 	)
 	totalAPIErrors = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "gotgbot_api_request_errors_total",
-			Help: "Number of bot API errors obtained.",
+			Namespace: "gotgbot",
+			Name:      "api_request_errors_total",
+			Help:      "Number of bot API errors obtained.",
 		},
 		[]string{
 			"http_method",
@@ -62,8 +65,9 @@ var (
 	)
 	requestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: "gotgbot_api_request_time_seconds",
-			Help: "Duration of requests made to the bot API.",
+			Namespace: "gotgbot",
+			Name:      "api_request_time_seconds",
+			Help:      "Duration of requests made to the bot API.",
 		},
 		[]string{
 			"http_method",

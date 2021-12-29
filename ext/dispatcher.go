@@ -7,6 +7,7 @@ import (
 	"runtime/debug"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -46,8 +47,16 @@ var (
 var (
 	updateProcessingDuration = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Name: "gotgbot_update_processing_time_seconds",
-			Help: "Time to process each update",
+			Namespace: "gotgbot",
+			Name:      "update_processing_time_seconds",
+			Help:      "Time to process each update.",
+		},
+	)
+	bufferedUpdates = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "gotgbot",
+			Name:      "buffered_updates",
+			Help:      "Number of updates currently buffered in the dispatcher limiter channel.",
 		},
 	)
 )
@@ -135,12 +144,22 @@ func NewDispatcher(updates chan json.RawMessage, opts *DispatcherOpts) *Dispatch
 
 // Start to handle incoming updates.
 func (d *Dispatcher) Start(b *gotgbot.Bot) {
+	go d.startDispatcherMetrics()
+
 	if d.limiter == nil {
 		d.limitlessDispatcher(b)
 		return
 	}
 
 	d.limitedDispatcher(b)
+}
+
+// startDispatcherMetrics is in charge of updating the dispatcher metrics.
+func (d *Dispatcher) startDispatcherMetrics() {
+	for {
+		bufferedUpdates.Set(float64(len(d.limiter)))
+		time.Sleep(time.Second)
+	}
 }
 
 // Stop waits for all currently processing updates to finish, and then returns.
