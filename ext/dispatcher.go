@@ -59,6 +59,13 @@ var (
 			Help:      "Number of updates currently buffered in the dispatcher limiter channel.",
 		},
 	)
+	bufferedUpdatesLimit = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "gotgbot",
+			Name:      "buffered_updates_limit",
+			Help:      "Maximum number of buffered updates in the limiter channel.",
+		},
+	)
 )
 
 type Dispatcher struct {
@@ -156,6 +163,9 @@ func (d *Dispatcher) Start(b *gotgbot.Bot) {
 
 // startDispatcherMetrics is in charge of updating the dispatcher metrics.
 func (d *Dispatcher) startDispatcherMetrics() {
+	// Limiter cant be changed during execution, so only needs to be set once.
+	bufferedUpdatesLimit.Set(float64(cap(d.limiter)))
+
 	for {
 		bufferedUpdates.Set(float64(len(d.limiter)))
 		time.Sleep(time.Second)
