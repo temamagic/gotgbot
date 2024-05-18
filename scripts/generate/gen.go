@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/format"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"unicode"
@@ -187,6 +188,15 @@ type Field struct {
 	Types       []string `json:"types"`
 	Required    bool     `json:"required"`
 	Description string   `json:"description"`
+}
+
+var usernameDocsMatcher = regexp.MustCompile(` +(or username.*)?\(.+ @[a-z]+\)`)
+
+func (f Field) GetDescription() string {
+	if usernameDocsMatcher.MatchString(f.Description) {
+		return strings.TrimSpace(usernameDocsMatcher.ReplaceAllString(f.Description, ""))
+	}
+	return f.Description
 }
 
 func (f Field) isConstantField(d APIDescription, tgType TypeDescription) bool {
