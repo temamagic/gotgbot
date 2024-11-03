@@ -100,7 +100,7 @@ func TestDispatcher(t *testing.T) {
 			}
 
 			t.Log("Processing one update...")
-			err := d.ProcessUpdate(nil, &gotgbot.Update{
+			err := d.ProcessUpdate(&gotgbot.Bot{}, &gotgbot.Update{
 				Message: &gotgbot.Message{Text: "test text"},
 			}, nil)
 			if err != nil {

@@ -268,7 +268,7 @@ func (d *Dispatcher) processRawUpdate(b *gotgbot.Bot, r json.RawMessage) error {
 // ProcessUpdate iterates over the list of groups to execute the matching handlers.
 // This is also where we recover from any panics that are thrown by user code, to avoid taking down the bot.
 func (d *Dispatcher) ProcessUpdate(b *gotgbot.Bot, u *gotgbot.Update, data map[string]interface{}) (err error) {
-	ctx := NewContext(u, data)
+	ctx := NewContext(b, u, data)
 
 	defer func() {
 		if r := recover(); r != nil {
